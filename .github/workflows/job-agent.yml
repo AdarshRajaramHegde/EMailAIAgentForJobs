@@ -4,7 +4,13 @@ name: "🤖 AI Job Application Agent"
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    # Runs thrice a day: 2:00 AM, 7:00 AM, and 6:00 PM UTC (Dublin local time shifts by 1h in summer)
+    - cron: "0 2,7,18 * * *"
+
+  # Trigger on push to main branch
+  push:
+    branches:
+      - main
 
   # Allow manual trigger from GitHub UI
   workflow_dispatch:
@@ -12,7 +18,7 @@ on:
       mode:
         description: "Run mode"
         required: true
-        default: "discover"
+        default: "pipeline"
         type: choice
         options:
           - discover
@@ -59,7 +65,7 @@ jobs:
           echo "LinkedIn session injected successfully"
 
       - name: "🔍 Run Job Discovery & Pipeline"
-        if: github.event_name == 'schedule' || github.event.inputs.mode == 'full' || github.event.inputs.mode == 'discover' || github.event.inputs.mode == 'pipeline'
+        if: github.event_name == 'schedule' || github.event_name == 'push' || github.event.inputs.mode == 'full' || github.event.inputs.mode == 'discover' || github.event.inputs.mode == 'pipeline'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
@@ -79,7 +85,7 @@ jobs:
           python main.py --pipeline
 
       - name: "📧 Send Daily Summary"
-        if: github.event_name == 'schedule' || github.event.inputs.mode == 'report'
+        if: github.event_name == 'schedule' || github.event_name == 'push' || github.event.inputs.mode == 'report'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
