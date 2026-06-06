@@ -1,0 +1,19 @@
+services:
+  - type: worker
+    name: ai-job-agent
+    env: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jobagent-db
+          property: connectionString
+      - key: PYTHONUNBUFFERED
+        value: 1
+
+databases:
+  - name: jobagent-db
+    plan: free
+    databaseName: jobagent
+    user: jobagent

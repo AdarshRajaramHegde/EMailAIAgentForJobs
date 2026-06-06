@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  jobagent:
+    build: .
+    container_name: ai-job-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://jobagent:jobagent@postgres:5432/jobagent
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: jobagent-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jobagent
+      POSTGRES_PASSWORD: jobagent
+      POSTGRES_DB: jobagent
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:

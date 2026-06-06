@@ -1,0 +1,40 @@
+# Core
+python-dotenv
+pydantic
+pydantic-settings
+loguru
+
+# Database
+sqlalchemy
+alembic
+supabase
+psycopg2-binary
+
+# Web Scraping
+httpx
+beautifulsoup4
+lxml
+scrapy
+
+# Browser Automation
+playwright
+
+# AI — Google Gemini (FREE tier)
+google-generativeai
+
+# Scheduling
+apscheduler
+
+# Email (Gmail SMTP — FREE)
+jinja2
+
+# Resume Generation
+reportlab
+PyPDF2
+python-docx
+
+# Utilities
+fuzzywuzzy
+python-Levenshtein
+tenacity
+fake-useragent
