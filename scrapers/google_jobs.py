@@ -31,7 +31,8 @@ class GoogleJobsScraper(BaseScraper):
         jobs = []
         params = {
             "engine": "google_jobs",
-            "q": f"{job_title} {location}",
+            "q": job_title,
+            "location": location,
             "hl": "en",
             "api_key": settings.serpapi_key,
         }
