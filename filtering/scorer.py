@@ -61,22 +61,80 @@ class RelevanceScorer:
             "breakdown": breakdown,
         }
 
+    def select_best_resume_path(self, title: str, description: str) -> str:
+        """Select the most relevant resume file based on keywords in the job title/description."""
+        resumes = settings.resumes_list
+        if not resumes:
+            return settings.base_resume_path
+
+        title_lower = title.lower()
+        desc_lower = description.lower()
+
+        # 1. AI / ML Product Manager
+        if "ai" in title_lower or "machine learning" in title_lower or "artificial intelligence" in title_lower:
+            for r in resumes:
+                if "spm-ai" in r.lower() or "ai" in r.lower():
+                    return r
+
+        # 2. Technical Product Manager / Technical Program Manager / Scrum Master / Solutions Architect
+        if "technical" in title_lower or "tpm" in title_lower or "architect" in title_lower or "system" in title_lower:
+            for keyword in ["tpm", "technical", "architect"]:
+                for r in resumes:
+                    if keyword in r.lower():
+                        return r
+
+        # 3. Director of Product / Director / Lead / VP / Delivery
+        if "director" in title_lower or "vp" in title_lower or "head" in title_lower or "delivery" in title_lower or "lead" in title_lower:
+            for r in resumes:
+                if "dpm" in r.lower():
+                    return r
+            for r in resumes:
+                if "leader" in r.lower() or "pl" in r.lower():
+                    return r
+
+        # 4. Product Owner / Senior Product Owner
+        if "owner" in title_lower or "po" in title_lower:
+            for r in resumes:
+                if "spon" in r.lower() or "owner" in r.lower():
+                    return r
+
+        # 5. Business Analyst / Systems Analyst / Scrum Master
+        if "analyst" in title_lower or "ba" in title_lower or "scrum" in title_lower:
+            for keyword in ["ba", "analyst", "scrum"]:
+                for r in resumes:
+                    if keyword in r.lower():
+                        return r
+
+        # 6. Senior Product Manager / Senior
+        if "senior" in title_lower or "sr" in title_lower or "staff" in title_lower:
+            for r in resumes:
+                if "spm" in r.lower() or "senior" in r.lower():
+                    return r
+
+        # 7. Default Product Manager / general fallback
+        for keyword in ["pm cv", "product manager", "pm.pdf", "general"]:
+            for r in resumes:
+                if keyword in r.lower():
+                    return r
+
+        # Ultimate fallback
+        return settings.base_resume_path
+
     async def score_with_ai(self, title: str, description: str, company_name: str = "") -> Dict:
-        """Use LLM to get a more nuanced relevance score against all provided resumes."""
+        """Use LLM to get a more nuanced relevance score against the best pre-selected resume."""
         if not self.llm:
             return self.score(title, description, company_name=company_name)
 
-        best_result = {"score": 0, "breakdown": {}, "reasoning": "No resumes found", "best_resume": None}
-        resumes = settings.resumes_list
+        resume_path = self.select_best_resume_path(title, description)
+        logger.info(f"Pre-selected best resume for '{title}': {resume_path}")
 
-        for resume_path in resumes:
-            try:
-                # We need to load each resume text here or pass it in
-                from ai.resume_tailor import ResumeTailor
-                tailor = ResumeTailor(llm_client=self.llm) # This is a bit inefficient to init here, but works for now
-                resume_text = tailor._load_resume_text(resume_path)
+        try:
+            # Load the selected resume text
+            from ai.resume_tailor import ResumeTailor
+            tailor = ResumeTailor(llm_client=self.llm)
+            resume_text = tailor._load_resume_text(resume_path)
 
-                prompt = f"""Rate how relevant this job is for a candidate with the following profile:
+            prompt = f"""Rate how relevant this job is for a candidate with the following profile:
 - Target roles: {settings.target_job_titles}
 - Experience level: {settings.experience_level}
 - Preferred location: {settings.target_location}
@@ -98,25 +156,19 @@ Return a JSON object with:
 
 ONLY return valid JSON, no other text."""
 
-                response = await self.llm.generate(prompt)
-                data = json.loads(response)
-                current_score = min(100, max(0, data.get("score", 50)))
-                
-                if current_score > best_result["score"]:
-                    best_result = {
-                        "score": current_score,
-                        "breakdown": data.get("breakdown", {}),
-                        "reasoning": data.get("reasoning", ""),
-                        "best_resume": resume_path
-                    }
-            except Exception as e:
-                logger.warning(f"AI scoring failed for resume {resume_path}: {e}")
-                continue
-
-        if best_result["best_resume"] is None:
-             return self.score(title, description, company_name=company_name)
-
-        return best_result
+            response = await self.llm.generate(prompt)
+            data = json.loads(response)
+            current_score = min(100, max(0, data.get("score", 50)))
+            
+            return {
+                "score": current_score,
+                "breakdown": data.get("breakdown", {}),
+                "reasoning": data.get("reasoning", ""),
+                "best_resume": resume_path
+            }
+        except Exception as e:
+            logger.warning(f"AI scoring failed for selected resume {resume_path}: {e}")
+            return self.score(title, description, company_name=company_name)
 
     def _score_title(self, title: str) -> float:
         """Score title match (0-30)."""
